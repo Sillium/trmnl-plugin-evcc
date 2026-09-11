@@ -43,6 +43,116 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class HomeAssistantClient:
+    """Reads daily energy totals from Home Assistant.
+
+    EVCC only publishes lifetime counters (and none at all for the grid
+    meter), so day totals come from Home Assistant's utility_meter helpers
+    instead. Each configured key maps to one entity id or a list of entity
+    ids that get summed.
+    """
+
+    # Keys emitted into the payload, in display order.
+    FIELDS = (
+        "pv",
+        "home",
+        "home_without_wallbox",
+        "grid_import",
+        "grid_export",
+        "battery_charged",
+        "battery_discharged",
+        "ev_charged",
+    )
+
+    def __init__(
+        self,
+        url: str,
+        token: str,
+        entities: Dict[str, Any],
+        verbose: bool = False,
+    ):
+        self.url = url.rstrip('/')
+        self.entities = entities or {}
+        self.verbose = verbose
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        })
+
+    def _entity_value(self, entity_id: str) -> Optional[float]:
+        """Fetch one entity's state as a float, or None if unusable."""
+        try:
+            response = self.session.get(
+                f"{self.url}/api/states/{entity_id}", timeout=15
+            )
+            response.raise_for_status()
+            state = response.json().get("state")
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Home Assistant: {entity_id} failed: {e}")
+            return None
+        except ValueError:
+            logger.warning(f"Home Assistant: {entity_id} returned invalid JSON")
+            return None
+
+        # HA reports these for entities that are restarting or broken
+        if state in (None, "unavailable", "unknown", ""):
+            logger.warning(f"Home Assistant: {entity_id} is '{state}'")
+            return None
+
+        try:
+            return float(state)
+        except (TypeError, ValueError):
+            logger.warning(f"Home Assistant: {entity_id} is not numeric: {state!r}")
+            return None
+
+    def _sum(self, spec: Any) -> Optional[float]:
+        """Resolve a config value (entity id, or list of them) to a total.
+
+        Returns None only if every entity failed, so one dead sensor in a
+        list doesn't discard the others.
+        """
+        if not spec:
+            return None
+        ids = [spec] if isinstance(spec, str) else list(spec)
+        values = [v for v in (self._entity_value(i) for i in ids) if v is not None]
+        if not values:
+            return None
+        return sum(values)
+
+    @staticmethod
+    def format_energy(kwh: Optional[float]) -> Optional[str]:
+        """Format a kWh value for display: '9.4 kWh', '104 kWh'."""
+        if kwh is None:
+            return None
+        if abs(kwh) >= 100:
+            return f"{kwh:.0f} kWh"
+        return f"{kwh:.1f} kWh"
+
+    def collect(self) -> Dict[str, Any]:
+        """Fetch all configured entities and build the energy_today block."""
+        logger.info(f"Collecting daily energy from {self.url}")
+
+        values = {f: self._sum(self.entities.get(f)) for f in self.FIELDS}
+
+        result: Dict[str, Any] = {"available": any(v is not None for v in values.values())}
+        for field, value in values.items():
+            result[f"{field}_kwh"] = round(value, 1) if value is not None else None
+            result[f"{field}_formatted"] = self.format_energy(value)
+
+        # Autarkie: share of house consumption not taken from the grid.
+        # The daily analogue of the live view's green share.
+        home = values.get("home")
+        grid_import = values.get("grid_import")
+        if home and home > 0 and grid_import is not None:
+            self_sufficiency = (home - grid_import) / home * 100
+            result["self_sufficiency_pct"] = round(max(0.0, min(100.0, self_sufficiency)))
+        else:
+            result["self_sufficiency_pct"] = None
+
+        return result
+
+
 class EVCCCollector:
     """Collector for an EVCC instance."""
 
@@ -72,6 +182,7 @@ class EVCCCollector:
         max_loadpoints: int = 4,
         max_batteries: int = 4,
         power_unit: str = "auto",
+        homeassistant: Optional["HomeAssistantClient"] = None,
         verbose: bool = False,
         dry_run: bool = False,
     ):
@@ -81,6 +192,7 @@ class EVCCCollector:
         self.max_loadpoints = max_loadpoints
         self.max_batteries = max_batteries
         self.power_unit = power_unit
+        self.homeassistant = homeassistant
         self.verbose = verbose
         self.dry_run = dry_run
 
@@ -500,6 +612,15 @@ class EVCCCollector:
             }
         }
 
+        # Optional: daily energy totals from Home Assistant. A failure here
+        # must not cost us the EVCC data, so it never raises.
+        if self.homeassistant:
+            try:
+                payload["merge_variables"]["energy_today"] = self.homeassistant.collect()
+            except Exception as e:
+                logger.warning(f"Home Assistant collection failed: {e}")
+                payload["merge_variables"]["energy_today"] = {"available": False}
+
         return payload
 
     def send(self, payload: Dict[str, Any]) -> bool:
@@ -686,6 +807,20 @@ Examples:
             logger.error("Config file must contain 'evcc_url'")
             sys.exit(1)
 
+        # Optional Home Assistant source for daily energy totals
+        ha_config = config.get('homeassistant') or {}
+        ha_client = None
+        if ha_config.get('url') and ha_config.get('token'):
+            ha_client = HomeAssistantClient(
+                url=ha_config['url'],
+                token=ha_config['token'],
+                entities=ha_config.get('energy_today', {}),
+                verbose=args.verbose,
+            )
+            logger.info(f"Home Assistant: {ha_client.url}")
+        elif ha_config:
+            logger.warning("homeassistant config needs both 'url' and 'token' - skipping")
+
         collector = EVCCCollector(
             url=evcc_url,
             webhook=config.get('webhook', args.webhook),
@@ -693,6 +828,7 @@ Examples:
             max_loadpoints=config.get('max_loadpoints', args.max_loadpoints),
             max_batteries=config.get('max_batteries', args.max_batteries),
             power_unit=config.get('power_unit', args.power_unit),
+            homeassistant=ha_client,
             verbose=args.verbose,
             dry_run=args.dry_run,
         )

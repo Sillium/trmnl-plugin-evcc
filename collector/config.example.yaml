@@ -29,6 +29,34 @@ max_batteries: 4
 # Power display unit: auto, W, or kW (default: auto)
 power_unit: auto
 
+# Optional: daily energy totals from Home Assistant.
+#
+# EVCC only publishes lifetime counters, and nothing at all for the grid
+# meter, so day totals come from Home Assistant instead. Point each key at a
+# utility_meter helper with a daily cycle. A list is summed (e.g. two PV
+# inverters). Omit a key to leave that value out of the payload.
+#
+# Adds an `energy_today` block to the payload. Omit this whole section and
+# nothing changes - `energy_today` simply isn't sent.
+#
+# Create the token in Home Assistant under your user -> Security ->
+# Create Token. It only needs read access.
+#
+# homeassistant:
+#   url: http://homeassistant.local:8123
+#   token: eyJhbGciOi...your-long-lived-access-token
+#   energy_today:
+#     pv:
+#       - sensor.helper_solax_solar_yield_d
+#       - sensor.helper_hoymiles_solar_yield_d
+#     home: sensor.helper_energy_consumption_house_total_d
+#     home_without_wallbox: sensor.helper_energy_consumption_house_without_wallbox_d
+#     grid_import: sensor.helper_energy_grid_consumption_d
+#     grid_export: sensor.helper_energy_grid_feedin_d
+#     battery_charged: sensor.helper_battery_charging_energy_d
+#     battery_discharged: sensor.helper_battery_discharging_energy_d
+#     ev_charged: sensor.helper_openwb_energy_charged_d
+
 # Optional: HTTP server for Terminus/BYOS Extensions (poll mode)
 # serve:
 #   enabled: true

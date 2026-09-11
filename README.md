@@ -84,6 +84,9 @@ A ready-to-use Terminus template is included at [`src/terminus/full.liquid`](src
 | `max_loadpoints` | Maximum loadpoints to include (1-4) | `4` |
 | `max_batteries` | Battery devices in `battery.devices` (0 = aggregate only) | `4` |
 | `power_unit` | Power display: `auto`, `W`, or `kW` | `auto` |
+| `homeassistant.url` | Home Assistant URL, enables daily energy totals | Optional |
+| `homeassistant.token` | Long-lived access token (read access is enough) | Required with `url` |
+| `homeassistant.energy_today` | Map of value name to entity id (or list of ids, summed) | `{}` |
 | `serve.enabled` | Enable HTTP server for Terminus | `false` |
 | `serve.port` | HTTP server port | `8080` |
 | `serve.host` | HTTP server bind address | `0.0.0.0` |
@@ -179,6 +182,41 @@ docker run -d \
   -e TZ=Europe/Berlin \
   trmnl-evcc-collector
 ```
+
+## Daily Energy (Home Assistant)
+
+EVCC publishes lifetime counters only, and its grid meter exposes no energy
+counter at all, so per-day kWh figures can't be derived from EVCC alone. If you
+run Home Assistant with `utility_meter` helpers on a daily cycle, point the
+collector at them and it adds an `energy_today` block to the payload:
+
+```yaml
+homeassistant:
+  url: http://homeassistant.local:8123
+  token: eyJhbGciOi...
+  energy_today:
+    pv:
+      - sensor.helper_solax_solar_yield_d
+      - sensor.helper_hoymiles_solar_yield_d
+    home: sensor.helper_energy_consumption_house_total_d
+    grid_import: sensor.helper_energy_grid_consumption_d
+    grid_export: sensor.helper_energy_grid_feedin_d
+    battery_charged: sensor.helper_battery_charging_energy_d
+    battery_discharged: sensor.helper_battery_discharging_energy_d
+    ev_charged: sensor.helper_openwb_energy_charged_d
+```
+
+Each key accepts one entity id or a list to sum. Recognised keys: `pv`, `home`,
+`home_without_wallbox`, `grid_import`, `grid_export`, `battery_charged`,
+`battery_discharged`, `ev_charged`.
+
+Every value is emitted twice - `<key>_kwh` as a number and `<key>_formatted` as
+a display string - plus `self_sufficiency_pct` (share of house consumption not
+taken from the grid) and `available`.
+
+Unreachable entities, a bad token, or Home Assistant being down never fail a
+collection cycle: the affected values come through as `null`, `available` turns
+`false`, and the EVCC data is still sent.
 
 ## Template Sizes
 
