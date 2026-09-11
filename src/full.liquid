@@ -191,8 +191,11 @@
         {% assign solar_pct = lp.session_solar_pct | default: 0 | plus: 0 %}
         <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_leaf }} {{ solar_pct }}% Solar</span>
         {% if lp.session_price %}
-        {% capture session_price %}{{ lp.session_price | round: 2 }}{% endcapture %}
-        <span class="description">{{ session_price | replace: '.', ',' }} {{ currency | default: "EUR" }}</span>
+        {% comment %} Liquid drops trailing zeros, so build the cents by hand {% endcomment %}
+        {%- assign p_cents = lp.session_price | times: 100 | round -%}
+        {%- assign p_eur = p_cents | divided_by: 100 -%}
+        {%- assign p_rest = p_cents | modulo: 100 -%}
+        <span class="description">{{ p_eur }},{% if p_rest < 10 %}0{% endif %}{{ p_rest }} {{ currency | default: "EUR" }}</span>
         {% endif %}
       </div>
       {% endif %}
@@ -213,7 +216,10 @@
     <span class="flex flex--row flex--center-y gap--xsmall"><span class="label label--small">30 T:</span> <span class="value value--small">{{ statistics["30d"].charged_kwh | default: 0 | round: 0 }} kWh</span></span>
     <span class="description">{{ statistics["30d"].solar_pct | default: 0 | round: 0 }}% Solar</span>
     {% if statistics["30d"].avg_price %}
-    <span class="description">Ø {{ statistics["30d"].avg_price | round: 2 }} {{ currency | default: "EUR" }}/kWh</span>
+    {%- assign a_cents = statistics["30d"].avg_price | times: 100 | round -%}
+    {%- assign a_eur = a_cents | divided_by: 100 -%}
+    {%- assign a_rest = a_cents | modulo: 100 -%}
+    <span class="description">Ø {{ a_eur }},{% if a_rest < 10 %}0{% endif %}{{ a_rest }} {{ currency | default: "EUR" }}/kWh</span>
     {% endif %}
     {% endif %}
     {% if statistics.total %}
