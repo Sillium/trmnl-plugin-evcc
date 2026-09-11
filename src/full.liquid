@@ -42,6 +42,9 @@
   .evcc-full .flex--row.flex--between { justify-content: space-between; }
   .evcc-full .flex--row.flex--left { justify-content: flex-start; }
   .evcc-full .flex--col.flex--stretch-x { align-items: stretch; }
+  /* Nudge the energy row labels up from label--small (~12px). Relative so
+     it still tracks the device's --text-ui-scale. */
+  .evcc-full .evcc-row-label { font-size: calc(var(--label-small-font-size, 12px) * 1.2); }
   .evcc-soc-bar { width: 100%; height: 10px; background: #e5e5e5; border: 1px solid #999; overflow: hidden; position: relative; }
   .evcc-soc-fill { height: 100%; background: black; }
   .evcc-soc-limit { position: absolute; top: 0; bottom: 0; width: 2px; background: #666; }
@@ -68,34 +71,34 @@
     <div class="grid grid--cols-2 gap--medium">
       <div class="flex flex--col flex--stretch-x">
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_solar }} Solar</span>
+          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_solar }} Solar</span>
           <span class="value value--small">{{ energy.pv_power_formatted | default: "0 W" }}</span>
         </div>
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_grid }} Netzbezug</span>
+          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_grid }} Netzbezug</span>
           <span class="value value--small">{% if energy.grid_import %}{{ energy.grid_power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</span>
         </div>
         {% comment %} Battery discharge feeds the home, so it belongs with the sources {% endcomment %}
         {% if has_battery %}
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_battery }} Akku</span>
+          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_battery }} Akku</span>
           <span class="value value--small">{% if battery.discharging %}{{ battery.power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</span>
         </div>
         {% endif %}
       </div>
       <div class="flex flex--col flex--stretch-x">
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_home }} Verbrauch</span>
+          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_home }} Verbrauch</span>
           <span class="value value--small">{{ energy.home_power_formatted | default: "0 W" }}</span>
         </div>
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_grid }} Einspeisung</span>
+          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_grid }} Einspeisung</span>
           <span class="value value--small">{% unless energy.grid_import %}{{ energy.grid_power_formatted | default: "0 W" }}{% else %}0 W{% endunless %}</span>
         </div>
         {% comment %} Battery charge draws from the home, so it belongs with the sinks {% endcomment %}
         {% if has_battery %}
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_battery }} Akkuladung</span>
+          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_battery }} Akkuladung</span>
           <span class="value value--small">{% if battery.charging %}{{ battery.power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</span>
         </div>
         {% endif %}
