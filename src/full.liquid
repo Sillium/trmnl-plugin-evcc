@@ -92,7 +92,7 @@
       </div>
       <div class="flex flex--col flex--stretch-x">
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_home }} Verbrauch{% if energy_today.home_formatted %} - {{ energy_today.home_formatted | replace: '.', ',' }}{% endif %}</span>
+          <span class="label label--small evcc-row-label flex flex--row flex--center-y gap--xsmall">{{ icon_home }} Verbrauch{% if energy_today.home_without_wallbox_formatted %} - {{ energy_today.home_without_wallbox_formatted | replace: '.', ',' }}{% endif %}</span>
           <span class="value value--small">{{ energy.home_power_formatted | default: "0 W" }}</span>
         </div>
         <div class="flex flex--row flex--between flex--center-y">
@@ -129,7 +129,6 @@
       {%- when "Fast" -%}{%- assign lp_mode = "Schnell" -%}
       {%- else -%}{%- assign lp_mode = lp_mode_raw -%}
     {%- endcase -%}
-    {% if lp.connected %}
     <div class="evcc-card flex flex--col flex--stretch-x gap--xsmall">
       <div class="flex flex--row flex--between flex--center-y">
         <span class="label">{{ lp.title | default: "Ladepunkt" }}</span>
@@ -139,16 +138,21 @@
       <span class="description">{{ lp_status }}</span>
 
       {% if show_vehicle == "yes" and lp.vehicle_connected %}
-        {% if lp.vehicle_title %}
+        {% assign v_soc = lp.vehicle_soc | default: 0 | plus: 0 | round: 0 %}
+        {% assign v_range = lp.vehicle_range | default: 0 | plus: 0 %}
+        {% assign l_soc = lp.limit_soc | default: 0 | plus: 0 %}
+        {% comment %} Liquid treats '' and 0 as truthy, and `blank` is not a
+           usable literal here, so test length explicitly - the wallbox sends
+           an empty title and zeroes when it can't identify the vehicle {% endcomment %}
+        {% assign v_title_len = lp.vehicle_title | size %}
+        {% if v_title_len > 0 or v_range > 0 %}
         <div class="flex flex--row flex--between flex--center-y">
           <span class="label flex flex--row flex--center-y gap--xsmall">{{ icon_car }} {{ lp.vehicle_title }}</span>
-          {% if lp.vehicle_range %}<span class="value value--small">{{ lp.vehicle_range }} km</span>{% endif %}
+          {% if v_range > 0 %}<span class="value value--small">{{ v_range }} km</span>{% endif %}
         </div>
         {% endif %}
 
-        {% if lp.vehicle_soc %}
-        {% assign v_soc = lp.vehicle_soc | default: 0 | plus: 0 | round: 0 %}
-        {% assign l_soc = lp.limit_soc | plus: 0 %}
+        {% if v_soc > 0 %}
         <div class="evcc-soc-bar">
           <div class="evcc-soc-fill" style="width: {{ v_soc }}%;"></div>
           {% if l_soc > 0 and l_soc < 100 %}
@@ -163,35 +167,36 @@
       {% endif %}
 
       {% assign charged_kwh = lp.charged_energy_kwh | default: 0 | plus: 0.0 %}
-      {% if lp.charging or charged_kwh > 0 %}
+      {% capture session_kwh %}{{ charged_kwh | round: 1 }}{% endcapture %}
+      {% if lp.charging or charged_kwh > 0 or energy_today.ev_charged_formatted %}
       <div class="flex flex--row flex--between flex--center-y">
         <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_bolt }} {% if lp.charging %}<span class="value value--small">{{ lp.charge_power_formatted | default: "0 W" }}</span>{% endif %}</span>
         <span class="flex flex--row flex--center-y gap--xsmall">
-          <span class="value value--small">{{ charged_kwh | round: 1 }} kWh</span>
+          {% comment %} Today's total, then this session's {% endcomment %}
+          {% if energy_today.ev_charged_formatted %}<span class="label label--small evcc-row-label">{{ energy_today.ev_charged_formatted | replace: '.', ',' }}</span>{% endif %}
+          {% if charged_kwh > 0 %}
+          <span class="value value--small">{% if energy_today.ev_charged_formatted %}&middot; {% endif %}{{ session_kwh | replace: '.', ',' }} kWh</span>
           {% if lp.charge_duration_formatted %}<span class="description">&middot; {{ lp.charge_duration_formatted }}</span>{% endif %}
+          {% endif %}
         </span>
       </div>
 
+      {% if charged_kwh > 0 %}
       <div class="flex flex--row flex--between flex--center-y">
         {% assign solar_pct = lp.session_solar_pct | default: 0 | plus: 0 %}
         <span class="label label--small flex flex--row flex--center-y gap--xsmall">{{ icon_leaf }} {{ solar_pct }}% Solar</span>
         {% if lp.session_price %}
-        <span class="description">{{ lp.session_price | round: 2 }} {{ currency | default: "EUR" }}</span>
+        {% capture session_price %}{{ lp.session_price | round: 2 }}{% endcapture %}
+        <span class="description">{{ session_price | replace: '.', ',' }} {{ currency | default: "EUR" }}</span>
         {% endif %}
       </div>
+      {% endif %}
       {% endif %}
 
       {% if lp.plan_active and lp.plan_time %}
       <div class="description flex flex--row flex--center-y gap--xsmall flex--left">{{ icon_clock }} Plan: {{ lp.plan_time }}</div>
       {% endif %}
     </div>
-    {% else %}
-    <div class="flex flex--row flex--center-y gap--small flex--left">
-      <span class="label">{{ lp.title | default: "Ladepunkt" }}</span>
-      <span class="label label--small label--outline">{{ lp_mode }}</span>
-      <span class="description">{{ lp_status }}</span>
-    </div>
-    {% endif %}
     {% endfor %}
   {% endif %}
 
