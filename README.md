@@ -1,6 +1,5 @@
 # TRMNL EVCC Solar Charging
 
-[![Docker Image](https://img.shields.io/badge/ghcr.io-trmnl--evcc--collector-blue)](https://ghcr.io/ingm4r/trmnl-evcc-collector)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Monitor your [EVCC](https://evcc.io) solar charging setup on TRMNL e-ink displays. See real-time solar production, grid usage, battery state, and EV charging sessions at a glance.
@@ -31,13 +30,11 @@ Monitor your [EVCC](https://evcc.io) solar charging setup on TRMNL e-ink display
 
 ### 2. Set Up the Collector
 
-```bash
-# Create a directory for the collector
-mkdir trmnl-evcc && cd trmnl-evcc
+The image is built from source, so clone the repo onto the docker host:
 
-# Download the required files
-curl -O https://raw.githubusercontent.com/ingm4r/trmnl-plugin-evcc/main/collector/docker-compose.yml
-curl -O https://raw.githubusercontent.com/ingm4r/trmnl-plugin-evcc/main/collector/config.example.yaml
+```bash
+git clone https://github.com/Sillium/trmnl-plugin-evcc.git
+cd trmnl-plugin-evcc/collector
 
 # Create your config from the example
 cp config.example.yaml config.yaml
@@ -56,13 +53,14 @@ evcc_url: http://evcc:7070
 webhook: https://usetrmnl.com/api/custom_plugins/your-webhook-id
 
 max_loadpoints: 2
+max_batteries: 4
 power_unit: auto
 ```
 
 ### 4. Start the Collector
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
 The collector will now send data to your TRMNL device every 5 minutes.
@@ -124,10 +122,14 @@ Configure these in your TRMNL plugin settings:
 
 ### With Config File (Recommended)
 
+Builds from this checkout, so the docker host needs a clone of the repo:
+
 ```yaml
 services:
   trmnl-evcc-collector:
-    image: ghcr.io/ingm4r/trmnl-evcc-collector:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: trmnl-evcc-collector
     restart: unless-stopped
     volumes:
@@ -136,12 +138,22 @@ services:
       - TZ=Europe/Berlin
 ```
 
+```bash
+cd collector
+cp config.example.yaml config.yaml   # then edit it
+docker compose up -d --build
+```
+
+After pulling new commits, rebuild with `docker compose up -d --build`.
+
 ### With Environment Variables
 
 ```yaml
 services:
   trmnl-evcc-collector:
-    image: ghcr.io/ingm4r/trmnl-evcc-collector:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: trmnl-evcc-collector
     restart: unless-stopped
     environment:
@@ -150,11 +162,14 @@ services:
       - INTERVAL=300
       - TZ=Europe/Berlin
       - MAX_LOADPOINTS=2
+      - MAX_BATTERIES=4
 ```
 
 ### Docker Run (Single Instance)
 
 ```bash
+docker build -t trmnl-evcc-collector ./collector
+
 docker run -d \
   --name trmnl-evcc-collector \
   --restart unless-stopped \
@@ -162,7 +177,7 @@ docker run -d \
   -e WEBHOOK_URL=https://usetrmnl.com/api/custom_plugins/xxx \
   -e INTERVAL=300 \
   -e TZ=Europe/Berlin \
-  ghcr.io/ingm4r/trmnl-evcc-collector:latest
+  trmnl-evcc-collector
 ```
 
 ## Template Sizes

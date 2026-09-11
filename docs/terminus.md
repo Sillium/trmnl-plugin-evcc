@@ -42,7 +42,9 @@ serve:
 ```yaml
 services:
   trmnl-evcc-collector:
-    image: ghcr.io/ingm4r/trmnl-evcc-collector:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: trmnl-evcc-collector
     restart: unless-stopped
     volumes:

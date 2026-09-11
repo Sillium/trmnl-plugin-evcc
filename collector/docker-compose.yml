@@ -1,8 +1,15 @@
 # TRMNL EVCC Collector
-# Pre-built image from GitHub Container Registry
+# Builds the image from this checkout — no registry involved.
+#
+#   docker compose up -d --build
+#
+# Run from this directory (collector/) so the build context and the
+# config.yaml bind mount resolve correctly.
 services:
   trmnl-evcc-collector:
-    image: ghcr.io/ingm4r/trmnl-evcc-collector:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: trmnl-evcc-collector
     restart: unless-stopped
     volumes:
