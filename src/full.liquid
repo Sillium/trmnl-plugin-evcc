@@ -40,6 +40,7 @@
      the layout survives renderers that don't supply the .trmnl ancestor. */
   .evcc-full .flex--row { flex-direction: row; align-items: center; }
   .evcc-full .flex--row.flex--between { justify-content: space-between; }
+  .evcc-full .flex--row.flex--left { justify-content: flex-start; }
   .evcc-full .flex--col.flex--stretch-x { align-items: stretch; }
   .evcc-soc-bar { width: 100%; height: 10px; background: #e5e5e5; border: 1px solid #999; overflow: hidden; position: relative; }
   .evcc-soc-fill { height: 100%; background: black; }
@@ -160,11 +161,11 @@
       {% endif %}
 
       {% if lp.plan_active and lp.plan_time %}
-      <div class="description flex flex--row flex--center-y gap--xsmall">{{ icon_clock }} Plan: {{ lp.plan_time }}</div>
+      <div class="description flex flex--row flex--center-y gap--xsmall flex--left">{{ icon_clock }} Plan: {{ lp.plan_time }}</div>
       {% endif %}
     </div>
     {% else %}
-    <div class="flex flex--row flex--center-y gap--small">
+    <div class="flex flex--row flex--center-y gap--small flex--left">
       <span class="label">{{ lp.title | default: "Loadpoint" }}</span>
       {% assign lp_mode = lp.mode_label | default: lp.mode | default: "off" %}
       <span class="label label--small label--outline">{{ lp_mode }}</span>
@@ -177,7 +178,7 @@
   {% comment %} ===== STATISTICS ROW (optional) ===== {% endcomment %}
   {% if has_stats %}
   <div class="divider"></div>
-  <div class="flex flex--row flex--center-y gap--medium no-shrink">
+  <div class="flex flex--row flex--center-y gap--medium no-shrink flex--left">
     {% if statistics["30d"] %}
     <span class="flex flex--row flex--center-y gap--xsmall"><span class="label label--small">30d:</span> <span class="value value--small">{{ statistics["30d"].charged_kwh | default: 0 | round: 0 }} kWh</span></span>
     <span class="description">{{ statistics["30d"].solar_pct | default: 0 | round: 0 }}% solar</span>

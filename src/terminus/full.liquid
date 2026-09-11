@@ -33,6 +33,7 @@
      the layout survives renderers that don't supply the .trmnl ancestor. */
   .evcc-full .flex--row { flex-direction: row; align-items: center; }
   .evcc-full .flex--row.flex--between { justify-content: space-between; }
+  .evcc-full .flex--row.flex--left { justify-content: flex-start; }
   .evcc-full .flex--col.flex--stretch-x { align-items: stretch; }
   .evcc-mode { font-size: 10px; font-weight: bold; padding: 2px 6px; border: 2px solid black; border-radius: 4px; white-space: nowrap; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px; }
   .evcc-mode--pv { background: black; color: white; }
@@ -108,7 +109,7 @@
           </div>
 
           {% if lp.charging %}
-            <div class="flex flex--row flex--center-y gap--small flex--wrap">
+            <div class="flex flex--row flex--center-y gap--small flex--wrap flex--left">
               <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_zap }} <strong>{{ lp.charge_power_formatted }}</strong></span>
               {% if lp.charged_energy_kwh > 0 %}
               <strong>{{ lp.charged_energy_kwh }} kWh</strong>
@@ -118,7 +119,7 @@
               {% endif %}
             </div>
             {% if lp.session_solar_pct > 0 %}
-            <div class="flex flex--row flex--center-y gap--small flex--wrap text--gray-50">
+            <div class="flex flex--row flex--center-y gap--small flex--wrap text--gray-50 flex--left">
               <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_leaf }} <strong>{{ lp.session_solar_pct }}%</strong> solar</span>
               {% if lp.charge_remaining_formatted != "" %}
               <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_clock }} {{ lp.charge_remaining_formatted }} left</span>
@@ -151,7 +152,7 @@
           {% endif %}
         </div>
         {% else %}
-        <div class="flex flex--row flex--center-y gap--small">
+        <div class="flex flex--row flex--center-y gap--small flex--left">
           <strong>{{ lp.title }}</strong>
           <span class="evcc-mode{% if lp.mode == 'pv' %} evcc-mode--pv{% elsif lp.mode == 'minpv' %} evcc-mode--minpv{% endif %}">{{ lp.mode_label | default: lp.mode }}</span>
           <span class="text--gray-50">{{ lp.status | default: "Disconnected" }}</span>
