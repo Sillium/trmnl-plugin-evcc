@@ -157,7 +157,8 @@
           {% if v_range > 0 %}<span class="value value--small">{{ v_range }} km</span>{% endif %}
         </div>
 
-        {% if v_soc > 0 %}
+        {% comment %} Shown even at 0% - an offline vehicle reports no SoC, and a
+           missing bar leaves the card looking unfinished {% endcomment %}
         <div class="evcc-soc-bar">
           <div class="evcc-soc-fill" style="width: {{ v_soc }}%;"></div>
           {% if l_soc > 0 and l_soc < 100 %}
@@ -168,7 +169,6 @@
           <span class="value value--small">{{ v_soc }}%</span>
           {% if l_soc > 0 and l_soc < 100 %}<span class="description">Limit: {{ l_soc }}%</span>{% endif %}
         </div>
-        {% endif %}
       {% endif %}
 
       {% assign charged_kwh = lp.charged_energy_kwh | default: 0 | plus: 0.0 %}
