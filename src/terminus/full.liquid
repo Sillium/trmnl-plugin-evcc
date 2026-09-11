@@ -40,9 +40,14 @@
   <div class="evcc-card flex flex--col gap--xsmall no-shrink">
     <div class="flex flex--between flex--center-y">
       <span class="title title--small">Energy</span>
-      {% if energy.green_share_home %}
-      <span class="flex flex--center-y gap--xsmall text--gray-50">{{ icon_leaf }} {{ energy.green_share_home }}% green</span>
-      {% endif %}
+      <span class="flex flex--center-y gap--small">
+        {% if show_battery == "yes" and battery.configured %}
+        <span class="flex flex--center-y gap--xsmall text--gray-50">{{ icon_battery }} {{ battery.soc | default: 0 }}%</span>
+        {% endif %}
+        {% if energy.green_share_home %}
+        <span class="flex flex--center-y gap--xsmall text--gray-50">{{ icon_leaf }} {{ energy.green_share_home }}% green</span>
+        {% endif %}
+      </span>
     </div>
     <div class="divider"></div>
     <div class="grid grid--cols-2 gap--medium">
@@ -55,10 +60,11 @@
           <span class="flex flex--center-y gap--xsmall">{{ icon_grid }} Grid use</span>
           <strong>{% if energy.grid_import %}{{ energy.grid_power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</strong>
         </div>
+        {% comment %} Battery discharge feeds the home, so it belongs with the sources {% endcomment %}
         {% if show_battery == "yes" and battery.configured %}
         <div class="flex flex--between flex--center-y">
-          <span class="flex flex--center-y gap--xsmall">{{ icon_battery }} Battery {{ battery.soc | default: 0 }}%</span>
-          <strong>{{ battery.power_formatted | default: "0 W" }} {% if battery.charging %}&uarr;{% else %}&darr;{% endif %}</strong>
+          <span class="flex flex--center-y gap--xsmall">{{ icon_battery }} Battery use</span>
+          <strong>{% if battery.discharging %}{{ battery.power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</strong>
         </div>
         {% endif %}
       </div>
@@ -71,6 +77,13 @@
           <span class="flex flex--center-y gap--xsmall">{{ icon_grid }} Grid export</span>
           <strong>{% unless energy.grid_import %}{{ energy.grid_power_formatted | default: "0 W" }}{% else %}0 W{% endunless %}</strong>
         </div>
+        {% comment %} Battery charge draws from the home, so it belongs with the sinks {% endcomment %}
+        {% if show_battery == "yes" and battery.configured %}
+        <div class="flex flex--between flex--center-y">
+          <span class="flex flex--center-y gap--xsmall">{{ icon_battery }} Battery charge</span>
+          <strong>{% if battery.charging %}{{ battery.power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</strong>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
