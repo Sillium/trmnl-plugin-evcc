@@ -135,22 +135,22 @@
         <span class="label label--small{% if lp.charging %} label--inverted{% else %} label--outline{% endif %}">{{ lp_mode }}</span>
       </div>
 
-      <span class="description">{{ lp_status }}</span>
+      {% comment %} Connection state is always shown; the derived status only adds detail {% endcomment %}
+      <span class="description">{% if lp.connected %}Verbunden{% unless lp_status == "Verbunden" %} &middot; {{ lp_status }}{% endunless %}{% else %}Nicht verbunden{% endif %}</span>
 
-      {% if show_vehicle == "yes" and lp.vehicle_connected %}
+      {% if show_vehicle == "yes" and lp.connected %}
         {% assign v_soc = lp.vehicle_soc | default: 0 | plus: 0 | round: 0 %}
         {% assign v_range = lp.vehicle_range | default: 0 | plus: 0 %}
         {% assign l_soc = lp.limit_soc | default: 0 | plus: 0 %}
-        {% comment %} Liquid treats '' and 0 as truthy, and `blank` is not a
-           usable literal here, so test length explicitly - the wallbox sends
-           an empty title and zeroes when it can't identify the vehicle {% endcomment %}
+        {% comment %} EVCC sends an empty title when the car isn't assigned to a
+           configured vehicle - that is its guest/unknown case. Liquid treats ''
+           and 0 as truthy and `blank` is unusable here, so test length. {% endcomment %}
         {% assign v_title_len = lp.vehicle_title | size %}
-        {% if v_title_len > 0 or v_range > 0 %}
+        {% if v_title_len > 0 %}{% assign v_name = lp.vehicle_title %}{% else %}{% assign v_name = "Gastfahrzeug" %}{% endif %}
         <div class="flex flex--row flex--between flex--center-y">
-          <span class="label flex flex--row flex--center-y gap--xsmall">{{ icon_car }} {{ lp.vehicle_title }}</span>
+          <span class="label flex flex--row flex--center-y gap--xsmall">{{ icon_car }} {{ v_name }}</span>
           {% if v_range > 0 %}<span class="value value--small">{{ v_range }} km</span>{% endif %}
         </div>
-        {% endif %}
 
         {% if v_soc > 0 %}
         <div class="evcc-soc-bar">
