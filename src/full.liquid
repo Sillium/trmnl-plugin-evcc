@@ -177,11 +177,11 @@
       <div class="flex flex--row flex--between flex--center-y">
         <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_bolt }} {% if lp.charging %}<span class="value value--small">{{ lp.charge_power_formatted | default: "0 W" }}</span>{% endif %}</span>
         <span class="flex flex--row flex--center-y gap--xsmall">
-          {% comment %} Today's total, then this session's {% endcomment %}
+          {% comment %} Today's total, then this session's duration, then its energy {% endcomment %}
           {% if energy_today.ev_charged_formatted %}<span class="label label--small">{{ energy_today.ev_charged_formatted | replace: '.', ',' }}</span>{% endif %}
           {% if charged_kwh > 0 %}
-          <span class="value value--small">{% if energy_today.ev_charged_formatted %}&middot; {% endif %}{{ session_kwh | replace: '.', ',' }} kWh</span>
-          {% if lp.charge_duration_formatted %}<span class="description">&middot; {{ lp.charge_duration_formatted }}</span>{% endif %}
+          {% if lp.charge_duration_formatted %}<span class="description">{% if energy_today.ev_charged_formatted %}&middot; {% endif %}{{ lp.charge_duration_formatted }}</span>{% endif %}
+          <span class="value value--small">{% if energy_today.ev_charged_formatted or lp.charge_duration_formatted %}&middot; {% endif %}{{ session_kwh | replace: '.', ',' }} kWh</span>
           {% endif %}
         </span>
       </div>
