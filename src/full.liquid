@@ -122,7 +122,7 @@
     {%- comment -%} The collector emits status/mode as English display strings {%- endcomment -%}
     {%- case lp.status -%}
       {%- when "Charging" -%}{%- assign lp_status = "Lädt" -%}
-      {%- when "Waiting for solar" -%}{%- assign lp_status = "Warte auf Sonne" -%}
+      {%- when "Waiting for solar" -%}{%- assign lp_status = "Lädt nicht" -%}
       {%- when "Finished" -%}{%- assign lp_status = "Abgeschlossen" -%}
       {%- when "Connected" -%}{%- assign lp_status = "Verbunden" -%}
       {%- when "Disconnected" -%}{%- assign lp_status = "Nicht verbunden" -%}
