@@ -28,6 +28,12 @@
 <style>
   .evcc-full { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; height: 430px; box-sizing: border-box; }
   .evcc-card { background: white; border: 3px solid black; border-radius: 8px; padding: 10px 12px; }
+  /* The framework scopes its flex utilities under .trmnl and requires
+     flex--row/flex--col on the element itself. Restate the few we rely on so
+     the layout survives renderers that don't supply the .trmnl ancestor. */
+  .evcc-full .flex--row { flex-direction: row; align-items: center; }
+  .evcc-full .flex--row.flex--between { justify-content: space-between; }
+  .evcc-full .flex--col.flex--stretch-x { align-items: stretch; }
   .evcc-mode { font-size: 10px; font-weight: bold; padding: 2px 6px; border: 2px solid black; border-radius: 4px; white-space: nowrap; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px; }
   .evcc-mode--pv { background: black; color: white; }
   .evcc-mode--minpv { background: #666; color: white; border-color: #666; }
@@ -37,50 +43,50 @@
 
   {% comment %} ===== ENERGY + BATTERY INFO CARD ===== {% endcomment %}
   {% if show_energy == "yes" %}
-  <div class="evcc-card flex flex--col gap--xsmall no-shrink">
-    <div class="flex flex--between flex--center-y">
+  <div class="evcc-card flex flex--col flex--stretch-x gap--xsmall no-shrink">
+    <div class="flex flex--row flex--between flex--center-y">
       <span class="title title--small">Energy</span>
-      <span class="flex flex--center-y gap--small">
+      <span class="flex flex--row flex--center-y gap--small">
         {% if show_battery == "yes" and battery.configured %}
-        <span class="flex flex--center-y gap--xsmall text--gray-50">{{ icon_battery }} {{ battery.soc | default: 0 }}%</span>
+        <span class="flex flex--row flex--center-y gap--xsmall text--gray-50">{{ icon_battery }} {{ battery.soc | default: 0 }}%</span>
         {% endif %}
         {% if energy.green_share_home %}
-        <span class="flex flex--center-y gap--xsmall text--gray-50">{{ icon_leaf }} {{ energy.green_share_home }}% green</span>
+        <span class="flex flex--row flex--center-y gap--xsmall text--gray-50">{{ icon_leaf }} {{ energy.green_share_home }}% green</span>
         {% endif %}
       </span>
     </div>
     <div class="divider"></div>
     <div class="grid grid--cols-2 gap--medium">
-      <div class="flex flex--col">
-        <div class="flex flex--between flex--center-y">
-          <span class="flex flex--center-y gap--xsmall">{{ icon_sun }} Production</span>
+      <div class="flex flex--col flex--stretch-x">
+        <div class="flex flex--row flex--between flex--center-y">
+          <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_sun }} Production</span>
           <strong>{{ energy.pv_power_formatted | default: "0 W" }}</strong>
         </div>
-        <div class="flex flex--between flex--center-y">
-          <span class="flex flex--center-y gap--xsmall">{{ icon_grid }} Grid use</span>
+        <div class="flex flex--row flex--between flex--center-y">
+          <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_grid }} Grid use</span>
           <strong>{% if energy.grid_import %}{{ energy.grid_power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</strong>
         </div>
         {% comment %} Battery discharge feeds the home, so it belongs with the sources {% endcomment %}
         {% if show_battery == "yes" and battery.configured %}
-        <div class="flex flex--between flex--center-y">
-          <span class="flex flex--center-y gap--xsmall">{{ icon_battery }} Battery use</span>
+        <div class="flex flex--row flex--between flex--center-y">
+          <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_battery }} Battery use</span>
           <strong>{% if battery.discharging %}{{ battery.power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</strong>
         </div>
         {% endif %}
       </div>
-      <div class="flex flex--col">
-        <div class="flex flex--between flex--center-y">
-          <span class="flex flex--center-y gap--xsmall">{{ icon_home }} Consumption</span>
+      <div class="flex flex--col flex--stretch-x">
+        <div class="flex flex--row flex--between flex--center-y">
+          <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_home }} Consumption</span>
           <strong>{{ energy.home_power_formatted | default: "0 W" }}</strong>
         </div>
-        <div class="flex flex--between flex--center-y">
-          <span class="flex flex--center-y gap--xsmall">{{ icon_grid }} Grid export</span>
+        <div class="flex flex--row flex--between flex--center-y">
+          <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_grid }} Grid export</span>
           <strong>{% unless energy.grid_import %}{{ energy.grid_power_formatted | default: "0 W" }}{% else %}0 W{% endunless %}</strong>
         </div>
         {% comment %} Battery charge draws from the home, so it belongs with the sinks {% endcomment %}
         {% if show_battery == "yes" and battery.configured %}
-        <div class="flex flex--between flex--center-y">
-          <span class="flex flex--center-y gap--xsmall">{{ icon_battery }} Battery charge</span>
+        <div class="flex flex--row flex--between flex--center-y">
+          <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_battery }} Battery charge</span>
           <strong>{% if battery.charging %}{{ battery.power_formatted | default: "0 W" }}{% else %}0 W{% endif %}</strong>
         </div>
         {% endif %}
@@ -95,34 +101,34 @@
     {% for lp in loadpoints %}
       {% if lp_shown < max_lps %}
         {% if lp.connected %}
-        <div class="evcc-card flex flex--col gap--xsmall">
-          <div class="flex flex--between flex--center-y">
+        <div class="evcc-card flex flex--col flex--stretch-x gap--xsmall">
+          <div class="flex flex--row flex--between flex--center-y">
             <strong>{{ lp.title }}</strong>
             <span class="evcc-mode{% if lp.mode == 'pv' %} evcc-mode--pv{% elsif lp.mode == 'minpv' %} evcc-mode--minpv{% endif %}">{{ lp.mode_label | default: lp.mode }}</span>
           </div>
 
           {% if lp.charging %}
-            <div class="flex flex--center-y gap--small flex--wrap">
-              <span class="flex flex--center-y gap--xsmall">{{ icon_zap }} <strong>{{ lp.charge_power_formatted }}</strong></span>
+            <div class="flex flex--row flex--center-y gap--small flex--wrap">
+              <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_zap }} <strong>{{ lp.charge_power_formatted }}</strong></span>
               {% if lp.charged_energy_kwh > 0 %}
               <strong>{{ lp.charged_energy_kwh }} kWh</strong>
               {% endif %}
               {% if lp.charge_duration_formatted != "" %}
-              <span class="flex flex--center-y gap--xsmall">{{ icon_clock }} {{ lp.charge_duration_formatted }}</span>
+              <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_clock }} {{ lp.charge_duration_formatted }}</span>
               {% endif %}
             </div>
             {% if lp.session_solar_pct > 0 %}
-            <div class="flex flex--center-y gap--small flex--wrap text--gray-50">
-              <span class="flex flex--center-y gap--xsmall">{{ icon_leaf }} <strong>{{ lp.session_solar_pct }}%</strong> solar</span>
+            <div class="flex flex--row flex--center-y gap--small flex--wrap text--gray-50">
+              <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_leaf }} <strong>{{ lp.session_solar_pct }}%</strong> solar</span>
               {% if lp.charge_remaining_formatted != "" %}
-              <span class="flex flex--center-y gap--xsmall">{{ icon_clock }} {{ lp.charge_remaining_formatted }} left</span>
+              <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_clock }} {{ lp.charge_remaining_formatted }} left</span>
               {% endif %}
             </div>
             {% endif %}
 
             {% if show_vehicle == "yes" and lp.vehicle_connected %}
-            <div class="flex flex--between flex--center-y">
-              <span class="flex flex--center-y gap--xsmall">{{ icon_car }} <strong>{{ lp.vehicle_title | default: "Vehicle" }}</strong></span>
+            <div class="flex flex--row flex--between flex--center-y">
+              <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_car }} <strong>{{ lp.vehicle_title | default: "Vehicle" }}</strong></span>
               <span>{{ lp.vehicle_soc | round: 0 }}% {% if lp.limit_soc > 0 %}/ {{ lp.limit_soc }}%{% endif %}{% if lp.vehicle_range > 0 %} &middot; {{ lp.vehicle_range }} km{% endif %}</span>
             </div>
             {% if lp.vehicle_soc > 0 and lp.limit_soc > 0 %}
@@ -137,15 +143,15 @@
           {% else %}
             <span class="text--gray-50">{{ lp.status | default: "Connected" }}</span>
             {% if show_vehicle == "yes" and lp.vehicle_connected %}
-            <div class="flex flex--between flex--center-y">
-              <span class="flex flex--center-y gap--xsmall">{{ icon_car }} <strong>{{ lp.vehicle_title | default: "Vehicle" }}</strong></span>
+            <div class="flex flex--row flex--between flex--center-y">
+              <span class="flex flex--row flex--center-y gap--xsmall">{{ icon_car }} <strong>{{ lp.vehicle_title | default: "Vehicle" }}</strong></span>
               <span>{{ lp.vehicle_soc | round: 0 }}%{% if lp.vehicle_range > 0 %} &middot; {{ lp.vehicle_range }} km{% endif %}</span>
             </div>
             {% endif %}
           {% endif %}
         </div>
         {% else %}
-        <div class="flex flex--center-y gap--small">
+        <div class="flex flex--row flex--center-y gap--small">
           <strong>{{ lp.title }}</strong>
           <span class="evcc-mode{% if lp.mode == 'pv' %} evcc-mode--pv{% elsif lp.mode == 'minpv' %} evcc-mode--minpv{% endif %}">{{ lp.mode_label | default: lp.mode }}</span>
           <span class="text--gray-50">{{ lp.status | default: "Disconnected" }}</span>
