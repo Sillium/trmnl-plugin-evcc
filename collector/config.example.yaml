@@ -22,6 +22,10 @@ evcc_url: http://evcc:7070
 # Maximum loadpoints to include (default: 4)
 max_loadpoints: 2
 
+# Maximum battery devices to include in battery.devices (default: 4)
+# Set to 0 to send only the aggregated battery values (smaller payload)
+max_batteries: 4
+
 # Power display unit: auto, W, or kW (default: auto)
 power_unit: auto
 

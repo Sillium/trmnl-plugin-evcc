@@ -36,6 +36,7 @@ ENV WEBHOOK_URL=""
 ENV INTERVAL="0"
 ENV TZ="UTC"
 ENV MAX_LOADPOINTS=""
+ENV MAX_BATTERIES=""
 ENV POWER_UNIT=""
 ENV SERVE_PORT=""
 EXPOSE 8080
@@ -78,6 +79,10 @@ fi
 
 if [[ -n "$MAX_LOADPOINTS" ]]; then
     ARGS="$ARGS --max-loadpoints $MAX_LOADPOINTS"
+fi
+
+if [[ -n "$MAX_BATTERIES" ]]; then
+    ARGS="$ARGS --max-batteries $MAX_BATTERIES"
 fi
 
 if [[ -n "$POWER_UNIT" ]]; then

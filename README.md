@@ -84,6 +84,7 @@ A ready-to-use Terminus template is included at [`src/terminus/full.liquid`](src
 | `evcc_url` | EVCC instance URL | Required |
 | `webhook` | TRMNL webhook URL | Optional |
 | `max_loadpoints` | Maximum loadpoints to include (1-4) | `4` |
+| `max_batteries` | Battery devices in `battery.devices` (0 = aggregate only) | `4` |
 | `power_unit` | Power display: `auto`, `W`, or `kW` | `auto` |
 | `serve.enabled` | Enable HTTP server for Terminus | `false` |
 | `serve.port` | HTTP server port | `8080` |
@@ -100,6 +101,7 @@ For running without a config file (single instance mode):
 | `INTERVAL` | Collection interval in seconds | No (default: 0) |
 | `TZ` | Timezone for display | No (default: UTC) |
 | `MAX_LOADPOINTS` | Maximum loadpoints to include | No (default: 4) |
+| `MAX_BATTERIES` | Maximum battery devices to include | No (default: 4) |
 | `POWER_UNIT` | Power display unit | No (default: auto) |
 | `SERVE_PORT` | Enable HTTP serve mode on this port | No |
 

@@ -32,7 +32,7 @@ from zoneinfo import ZoneInfo
 import requests
 import yaml
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # Configure logging
 logging.basicConfig(
@@ -53,12 +53,24 @@ class EVCCCollector:
         "now": "Fast",
     }
 
+    BATTERY_MODE_LABELS = {
+        "normal": "Normal",
+        "hold": "Hold",
+        "charge": "Grid charge",
+        "unknown": "",
+    }
+
+    # Ignore tiny standby values so the display doesn't flip between
+    # charging/discharging for a few watts of noise.
+    BATTERY_IDLE_THRESHOLD_W = 10
+
     def __init__(
         self,
         url: str,
         webhook: Optional[str] = None,
         timezone: Optional[str] = None,
         max_loadpoints: int = 4,
+        max_batteries: int = 4,
         power_unit: str = "auto",
         verbose: bool = False,
         dry_run: bool = False,
@@ -67,6 +79,7 @@ class EVCCCollector:
         self.webhook = webhook
         self.timezone = timezone or os.environ.get('TZ', '')
         self.max_loadpoints = max_loadpoints
+        self.max_batteries = max_batteries
         self.power_unit = power_unit
         self.verbose = verbose
         self.dry_run = dry_run
@@ -221,17 +234,55 @@ class EVCCCollector:
     def transform_battery(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Transform battery data from EVCC state.
 
+        EVCC sign convention (house perspective): power > 0 means the battery
+        is discharging into the home, power < 0 means it is charging.
+
+        Handles all three shapes EVCC has used:
+          - dict with aggregate + devices (current): state["battery"] =
+            {power, soc, capacity, energy, returnEnergy, devices: [...]}
+          - list of battery devices (older v0.2xx)
+          - flat top-level keys (batterySoc / batteryPower)
+
         Args:
             state: Full EVCC state dict.
 
         Returns:
-            Dict with battery configuration, SOC, power, and charging status.
+            Dict with battery configuration, SOC, power, flow direction,
+            capacity, EVCC battery mode and per-device details.
         """
-        batteries = state.get("battery", [])
-        if not isinstance(batteries, list):
-            batteries = []
+        raw = state.get("battery")
 
-        configured = len(batteries) > 0
+        total_power: float = 0
+        soc: float = 0
+        capacity: float = 0
+        devices: List[Dict[str, Any]] = []
+        configured = False
+
+        if isinstance(raw, dict):
+            # Aggregated form: use EVCC's own totals, they already account
+            # for differently sized batteries.
+            devices = [d for d in (raw.get("devices") or []) if isinstance(d, dict)]
+            total_power = raw.get("power", 0) or 0
+            soc = raw.get("soc", 0) or 0
+            capacity = raw.get("capacity", 0) or 0
+            configured = bool(devices) or bool(raw)
+        elif isinstance(raw, list):
+            devices = [d for d in raw if isinstance(d, dict)]
+            configured = len(devices) > 0
+            total_power = sum(d.get("power", 0) or 0 for d in devices)
+            capacity = sum(d.get("capacity", 0) or 0 for d in devices)
+            if capacity > 0:
+                # Capacity-weighted SOC is the correct aggregate.
+                soc = sum(
+                    (d.get("soc", 0) or 0) * (d.get("capacity", 0) or 0) for d in devices
+                ) / capacity
+            elif devices:
+                soc = sum(d.get("soc", 0) or 0 for d in devices) / len(devices)
+        elif "batterySoc" in state or "batteryPower" in state:
+            configured = True
+            total_power = state.get("batteryPower", 0) or 0
+            soc = state.get("batterySoc", 0) or 0
+            capacity = state.get("batteryCapacity", 0) or 0
 
         if not configured:
             return {
@@ -240,18 +291,81 @@ class EVCCCollector:
                 "power": 0,
                 "power_formatted": self.format_power(0, self.power_unit),
                 "charging": False,
+                "discharging": False,
+                "idle": True,
+                "state": "idle",
+                "capacity_kwh": 0,
+                "stored_kwh": 0,
+                "mode": "",
+                "mode_label": "",
+                "grid_charge_active": False,
+                "discharge_control": False,
+                "device_count": 0,
+                "devices": [],
             }
 
-        total_power = sum(b.get("power", 0) or 0 for b in batteries)
-        soc_values = [b.get("soc", 0) or 0 for b in batteries]
-        avg_soc = sum(soc_values) / len(soc_values) if soc_values else 0
+        charging = total_power < -self.BATTERY_IDLE_THRESHOLD_W
+        discharging = total_power > self.BATTERY_IDLE_THRESHOLD_W
+
+        if charging:
+            flow_state = "charging"
+        elif discharging:
+            flow_state = "discharging"
+        else:
+            flow_state = "idle"
+
+        battery_mode = state.get("batteryMode") or ""
+        if battery_mode == "unknown":
+            battery_mode = ""
 
         return {
             "configured": True,
-            "soc": round(avg_soc),
-            "power": total_power,
+            "soc": round(soc),
+            "power": round(total_power),
             "power_formatted": self.format_power(total_power, self.power_unit),
-            "charging": total_power > 0,
+            "charging": charging,
+            "discharging": discharging,
+            "idle": flow_state == "idle",
+            "state": flow_state,
+            "capacity_kwh": round(capacity, 1),
+            "stored_kwh": round(capacity * soc / 100, 1),
+            "mode": battery_mode,
+            "mode_label": self.BATTERY_MODE_LABELS.get(battery_mode, battery_mode),
+            "grid_charge_active": bool(state.get("batteryGridChargeActive", False)),
+            "discharge_control": bool(state.get("batteryDischargeControl", False)),
+            "device_count": len(devices),
+            "devices": [
+                self.transform_battery_device(d)
+                for d in devices[:self.max_batteries]
+            ],
+        }
+
+    def transform_battery_device(self, dev: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform a single battery device from EVCC state.
+
+        Args:
+            dev: Battery device dict from state["battery"]["devices"].
+
+        Returns:
+            Dict with title, SOC, power and flow direction for one battery.
+        """
+        power = dev.get("power", 0) or 0
+        soc = dev.get("soc", 0) or 0
+        capacity = dev.get("capacity", 0) or 0
+
+        charging = power < -self.BATTERY_IDLE_THRESHOLD_W
+        discharging = power > self.BATTERY_IDLE_THRESHOLD_W
+
+        return {
+            "title": dev.get("title") or dev.get("name", ""),
+            "soc": round(soc),
+            "power": round(power),
+            "power_formatted": self.format_power(power, self.power_unit),
+            "charging": charging,
+            "discharging": discharging,
+            "state": "charging" if charging else ("discharging" if discharging else "idle"),
+            "capacity_kwh": round(capacity, 1),
+            "controllable": bool(dev.get("controllable", False)),
         }
 
     def transform_loadpoint(self, lp: Dict[str, Any]) -> Dict[str, Any]:
@@ -545,6 +659,8 @@ Examples:
                         help='Collection interval in seconds (0 = run once)')
     parser.add_argument('--max-loadpoints', type=int, default=4,
                         help='Max loadpoints to include (default: 4)')
+    parser.add_argument('--max-batteries', type=int, default=4,
+                        help='Max battery devices to include (default: 4)')
     parser.add_argument('--power-unit', choices=['W', 'kW', 'auto'], default='auto',
                         help='Power display unit (default: auto)')
     parser.add_argument('--serve', action='store_true', help='Enable HTTP server')
@@ -575,6 +691,7 @@ Examples:
             webhook=config.get('webhook', args.webhook),
             timezone=config.get('timezone', args.timezone),
             max_loadpoints=config.get('max_loadpoints', args.max_loadpoints),
+            max_batteries=config.get('max_batteries', args.max_batteries),
             power_unit=config.get('power_unit', args.power_unit),
             verbose=args.verbose,
             dry_run=args.dry_run,
@@ -597,6 +714,7 @@ Examples:
             webhook=args.webhook,
             timezone=args.timezone,
             max_loadpoints=args.max_loadpoints,
+            max_batteries=args.max_batteries,
             power_unit=args.power_unit,
             verbose=args.verbose,
             dry_run=args.dry_run,

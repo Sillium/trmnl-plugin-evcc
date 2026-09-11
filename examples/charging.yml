@@ -36,7 +36,45 @@ variables:
     soc: 95
     power: -200
     power_formatted: "200 W"
-    charging: false
+    charging: true
+    discharging: false
+    idle: false
+    state: charging
+    capacity_kwh: 15.4
+    stored_kwh: 14.6
+    mode: normal
+    mode_label: Normal
+    grid_charge_active: false
+    discharge_control: false
+    device_count: 3
+    devices:
+      - title: Marstek 429e
+        soc: 96
+        power: -70
+        power_formatted: "70 W"
+        charging: true
+        discharging: false
+        state: charging
+        capacity_kwh: 5.1
+        controllable: false
+      - title: Marstek 3232
+        soc: 95
+        power: -70
+        power_formatted: "70 W"
+        charging: true
+        discharging: false
+        state: charging
+        capacity_kwh: 5.1
+        controllable: false
+      - title: Marstek 3302
+        soc: 94
+        power: -60
+        power_formatted: "60 W"
+        charging: true
+        discharging: false
+        state: charging
+        capacity_kwh: 5.1
+        controllable: false
 
   loadpoints:
     - title: Garage
