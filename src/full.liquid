@@ -42,12 +42,14 @@
   .evcc-full .flex--row.flex--between { justify-content: space-between; }
   .evcc-full .flex--row.flex--left { justify-content: flex-start; }
   .evcc-full .flex--col.flex--stretch-x { align-items: stretch; }
-  /* label--small resolves to ~12px, too small next to the values. Lift it to
-     the framework's normal label size so it still tracks --text-ui-scale. */
-  .evcc-full .label--small { font-size: var(--label-font-size, 16px); }
-  /* Same for description, so the status line and session details don't
-     become the only tiny text left on the card. */
-  .evcc-full .description { font-size: var(--label-font-size, 16px); }
+  /* The framework's small sizes (~12px label--small, ~12px description) are
+     unreadable next to values rendered near 24px. Move all label-ish text to
+     the large label size; framework vars keep it tracking --text-ui-scale.
+     .label is lifted too, so card titles don't end up smaller than the
+     status line beneath them. */
+  .evcc-full .label,
+  .evcc-full .label--small,
+  .evcc-full .description { font-size: var(--label-large-font-size, 21px); }
   .evcc-soc-bar { width: 100%; height: 10px; background: #e5e5e5; border: 1px solid #999; overflow: hidden; position: relative; }
   .evcc-soc-fill { height: 100%; background: black; }
   .evcc-soc-limit { position: absolute; top: 0; bottom: 0; width: 2px; background: #666; }
